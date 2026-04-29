@@ -89,8 +89,7 @@ def _mac_suffix(mac_bytes: bytes) -> str:
 
     The desktop-side scanner matches on the prefix "Claude_" and uses
     the suffix to distinguish multiple buddies. 6 hex chars gives us
-    16M unique names, which is plenty even if every dev at Anthropic
-    builds one.
+    16M unique names, plenty for any plausible deployment.
     """
     return "".join("{:02X}".format(b) for b in mac_bytes[-3:])
 
@@ -122,8 +121,8 @@ def _ensure_stack(name_prefix: str):
     Buddy app, etc. Only permissive scanners like LightBlue still
     see it.
 
-    The sequence that empirically avoids the lockup on device
-    3c:0f:02:e8:7d:ba:
+    The sequence that empirically avoids the lockup on the
+    Cardputer-Adv test units we developed against:
 
       1. active(True)
       2. config(gap_name=...)
@@ -144,15 +143,13 @@ def _ensure_stack(name_prefix: str):
 
     ble = bluetooth.BLE()
 
-    # Diagnostic: record what UIFlow left the stack in before our
-    # init runs. Helps root-cause any further "advertising works from
-    # REPL but not when launched as a UIFlow app" regressions.
+    # The launcher and other apps may have left the stack in various
+    # states; only call active(True) if it isn't already, since the
+    # init transition is what tends to wedge the controller.
     try:
         pre_active = ble.active()
-    except Exception as e:
-        pre_active = "?: {}".format(e)
-    print("buddy_ble: stack pre-init active:", pre_active)
-
+    except Exception:
+        pre_active = False
     if not pre_active:
         ble.active(True)
     # Brief settle — premature config calls can race with the
