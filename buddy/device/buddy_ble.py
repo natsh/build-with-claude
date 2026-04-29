@@ -42,7 +42,7 @@ Two implementation subtleties worth calling out:
 
 import bluetooth
 import micropython
-import random
+import os
 import time
 from micropython import const
 
@@ -331,8 +331,13 @@ class BuddyBLE:
             if action == _PASSKEY_ACTION_DISP:
                 # Generate a fresh 6-digit key per pairing attempt —
                 # reusing one across reboots would let a shoulder-surf
-                # from last week still work.
-                pk = random.randint(0, 999_999)
+                # from last week still work. Backed by os.urandom (the
+                # ESP32 hardware RNG core), not random.randint (Mersenne
+                # Twister, predictable from a few outputs and unfit for
+                # a pairing secret an attacker can observe over the air).
+                # uint32 % 1_000_000 has ~2e-7 modulo bias across the
+                # 1_000_000 buckets — negligible for a 6-digit passkey.
+                pk = int.from_bytes(os.urandom(4), "big") % 1_000_000
                 self._current_passkey = pk
                 self._on_passkey(pk)
                 self._ble.gap_passkey(conn, action, pk)
