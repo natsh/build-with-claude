@@ -53,7 +53,7 @@ The bundled launcher auto-connects to the event WiFi (`cardputer` / `cardconnect
 1. Drop a `.py` file into `buddy/device/apps/`
 2. Push just the apps without re-flashing:
    ```bash
-   python3 onboard/scripts/install_apps.py --port <PORT> --src buddy
+   python3 .claude/skills/m5-onboard/scripts/install_apps.py --port <PORT> --src buddy
    ```
 3. The launcher auto-discovers the new app on next boot
 
@@ -85,7 +85,7 @@ that backup never exists for these users.
 
 ## Prerequisites
 
-You need **Python 3.10+**, **git**, and **Claude Code** on your laptop. `pyserial` ships vendored inside `onboard/scripts/vendor/`. `esptool` is GPL-licensed and is **not** vendored — the skill auto-installs it via pip on first run if it isn't already in your environment, so the user-facing experience is still a single command. To pre-install explicitly: `python3 -m pip install --user -r requirements.txt`.
+You need **Python 3.10+**, **git**, and **Claude Code** on your laptop. `pyserial` ships vendored inside `.claude/skills/m5-onboard/scripts/vendor/`. `esptool` is GPL-licensed and is **not** vendored — the skill auto-installs it via pip on first run if it isn't already in your environment, so the user-facing experience is still a single command. To pre-install explicitly: `python3 -m pip install --user -r requirements.txt`.
 
 Bootstrap if needed:
 
@@ -106,17 +106,17 @@ export M5_BUDDY_DIR=/path/to/buddy/device
 - **Download-mode prompt keeps retrying** — you're releasing G0 too early. Release Reset first, keep holding G0 for about a second, then release.
 - **"No USB-UART bridge found" (older boards)** — install the CH9102 driver on Windows; on macOS/Linux, unplug and replug.
 - **Claude Buddy never connects over BLE** — make sure the buddy launcher (not UIFlow's) owns `/flash/main.py`. The skill handles this automatically on install.
-- **Something else feels broken** — run `python3 onboard/scripts/smoke_test.py --port <PORT>` for an I2C + LCD + speaker + button check.
+- **Something else feels broken** — run `python3 .claude/skills/m5-onboard/scripts/smoke_test.py --port <PORT>` for an I2C + LCD + speaker + button check.
 
 ## What's in this repo
 
-- **`onboard/`** — the Claude Code skill. Detect port, flash UIFlow, install apps. See [`onboard/SKILL.md`](onboard/SKILL.md) for the full playbook and every gotcha baked into the scripts.
+- **`.claude/skills/m5-onboard/`** — the Claude Code skill. Detect port, flash UIFlow, install apps. See [`.claude/skills/m5-onboard/SKILL.md`](.claude/skills/m5-onboard/SKILL.md) for the full playbook and every gotcha baked into the scripts.
 - **`buddy/`** — the MicroPython app bundle that gets installed. See [`buddy/README.md`](buddy/README.md) for device-side layout and iteration tooling.
 
-The two are decoupled by design: `onboard` can install any bundle via `--apps <path>`; `buddy` is just what ships here.
+The two are decoupled by design: the `m5-onboard` skill can install any bundle via `--apps <path>`; `buddy` is just what ships here.
 
 ## License
 
 This project's own code is licensed under **Apache 2.0** — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
 
-`pyserial` (BSD-3-Clause, Apache-compatible) is the only third-party package bundled in `onboard/scripts/vendor/`. `esptool` (GPLv2+) is intentionally not vendored; it's declared as a pip dependency in [`requirements.txt`](requirements.txt) so the repository itself stays cleanly Apache-2.0. See [`LICENSE-THIRD-PARTY.md`](LICENSE-THIRD-PARTY.md) for details.
+`pyserial` (BSD-3-Clause, Apache-compatible) is the only third-party package bundled in `.claude/skills/m5-onboard/scripts/vendor/`. `esptool` (GPLv2+) is intentionally not vendored; it's declared as a pip dependency in [`requirements.txt`](requirements.txt) so the repository itself stays cleanly Apache-2.0. See [`LICENSE-THIRD-PARTY.md`](LICENSE-THIRD-PARTY.md) for details.

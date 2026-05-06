@@ -394,11 +394,14 @@ def install(
 #   1. ``$M5_BUDDY_DIR`` if set — explicit override, always wins.
 #      Useful for unusual setups: bundle on a different drive,
 #      monorepo at a custom path, OneDrive-redirected Downloads, etc.
-#   2. Script-relative ``<repo>/buddy/device``. Walks up two levels
-#      from this file (``onboard/scripts/install_apps.py`` →
-#      ``<repo>/`` → ``<repo>/buddy/device``) so the bundle is
+#   2. Script-relative ``<repo>/buddy/device``. Walks up four levels
+#      from this file
+#      (``<repo>/.claude/skills/m5-onboard/scripts/install_apps.py``
+#      → ``<repo>/.claude/skills/m5-onboard/`` →
+#      ``<repo>/.claude/skills/`` → ``<repo>/.claude/`` →
+#      ``<repo>/``, then join ``buddy/device``) so the bundle is
 #      found regardless of where the repo was cloned. Uses
-#      ``os.path.realpath(__file__)`` so the skill's symlink at
+#      ``os.path.realpath(__file__)`` so any symlink at
 #      ``~/.claude/skills/m5-onboard/`` resolves to the real clone
 #      before walking. This is the path that should hit on every
 #      normal install — clone anywhere, it works.
@@ -418,7 +421,7 @@ def _candidate_buddy_dirs() -> list[str]:
     cands: list[str] = []
     here = os.path.dirname(os.path.realpath(__file__))
     cands.append(
-        os.path.normpath(os.path.join(here, "..", "..", "buddy", "device"))
+        os.path.normpath(os.path.join(here, "..", "..", "..", "..", "buddy", "device"))
     )
     home = os.path.expanduser("~")
     cands.append(os.path.join(home, "Downloads", "m5stack", "buddy", "device"))

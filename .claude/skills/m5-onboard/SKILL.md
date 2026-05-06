@@ -9,37 +9,13 @@ This skill automates the full cold-start workflow for an M5Stack ESP32 device: d
 
 ## Installation (one-time, per machine)
 
-Claude Code discovers skills by their frontmatter name if they live under `~/.claude/skills/<name>/`. The skill lives inside the `m5stack` monorepo at `onboard/`, alongside the `buddy/` app bundle it installs. A single clone gives you both; a symlink (or junction on Windows) makes the skill discoverable and lets edits flow through without a copy step.
-
-### macOS / Linux
+The skill lives at `.claude/skills/m5-onboard/` inside this repo, so Claude Code auto-discovers it whenever the repo is added as a plugin (or the repo is opened as the working directory and `.claude/skills/` is on the discovery path). No symlink step is needed in the normal case — clone the repo, point Claude Code at it, and the skill is live.
 
 ```bash
 git clone <m5stack repo>             # anywhere — clone location doesn't matter
-mkdir -p ~/.claude/skills
-ln -s "$(pwd)/<repo-dir>/onboard" ~/.claude/skills/m5-onboard
 ```
-
-`<repo-dir>` is whatever folder `git clone` created (usually the repo's name on the remote). The skill resolves the bundle path off `os.path.realpath(__file__)`, so it follows the symlink back to wherever the repo actually lives.
-
-### Windows (PowerShell)
-
-```powershell
-git clone <m5stack repo>             # anywhere
-New-Item -ItemType Directory -Force -Path $HOME\.claude\skills | Out-Null
-# Junctions don't need admin/Developer Mode and work the same as
-# symlinks for this purpose (Claude Code follows them).
-cmd /c mklink /J "$HOME\.claude\skills\m5-onboard" "<full-path-to-repo>\onboard"
-```
-
-If `mklink /J` fails with "You do not have sufficient privilege", run PowerShell as Administrator once for the install step. Junctions are fine for directories on the same drive; if your repo lives on `D:\` and your user profile is on `C:\`, use a symlink (`cmd /c mklink /D ...`) instead — that path needs Developer Mode enabled in Windows Settings.
-
-### All platforms
 
 The `buddy/` sibling directory ships in the same repo, so `--apps buddy` works out of the box after a single clone — the skill resolves the bundle relative to its own install location (via `os.path.realpath(__file__)`), so the repo can live anywhere on disk. `~/Downloads/m5stack/buddy/device` and `~/Desktop/m5stack/buddy/device` are checked as conventional fallbacks if the script-relative path doesn't pan out. Set `M5_BUDDY_DIR` only if you want to point at a different bundle than the one bundled with this clone — see the Platform notes section.
-
-If the skill ever stops triggering, verify the junction/symlink still points somewhere real:
-- macOS / Linux: `ls -la ~/.claude/skills/m5-onboard`
-- Windows: `dir $HOME\.claude\skills\m5-onboard` (should show `<JUNCTION>` or `<SYMLINKD>` with a target)
 
 ## When to use
 
@@ -150,7 +126,7 @@ Once `m5-onboard go` finishes at the `DONE` banner, the device is ready to use o
 
 ## Dependencies
 
-- `pyserial` — vendored at `onboard/scripts/vendor/serial/` (pinned 3.5, BSD-3-Clause).
+- `pyserial` — vendored at `.claude/skills/m5-onboard/scripts/vendor/serial/` (pinned 3.5, BSD-3-Clause).
 - `esptool` — pip dependency, declared in `requirements.txt`. Importable check happens via `importlib.util.find_spec("esptool")`; binary backstop search covers `~/Library/Python/*/bin/` on macOS, `~/.local/bin/` on Linux, `%APPDATA%\Python\Python3XX\Scripts\` on Windows.
 
 `onboard.py` runs a preflight check at startup: if `esptool` (or, in the rare prune-vendor case, `pyserial`) is missing, it lists what's needed and asks the user whether to install now. On `Y` (or Enter) it runs `python -m pip install --user <missing>` in the current interpreter, then verifies. Inside a venv the `--user` flag is dropped so the install lands in the venv's site-packages. Non-interactive callers (piped stdin) get a manual-install hint instead of a prompt.
@@ -210,7 +186,7 @@ The skill runs on macOS, Linux, and Windows. Non-obvious bits:
 - **Windows Store Python.** Newer Windows 11 machines may have Python pre-installed via Microsoft Store. It works but has quirky PATH behavior (lives under `%LOCALAPPDATA%\Packages\PythonSoftwareFoundation.Python.*\`). `detect.py` checks that location too. If you have the choice, the `winget install Python.Python.3.13` version is more predictable.
 - **Bundle path resolution.** `install_apps.py`'s `--src buddy` shorthand resolves in this order:
   1. `$M5_BUDDY_DIR` if set — explicit override, always wins. Useful when you want to point at a fork or a customized bundle that isn't in this clone.
-  2. The `buddy/device/` directory inside this repo, found via `os.path.realpath(__file__)` walking up from `install_apps.py`. Works for any clone location, including symlinked skill installs at `~/.claude/skills/m5-onboard/`.
+  2. The `buddy/device/` directory inside this repo, found via `os.path.realpath(__file__)` walking up from `install_apps.py`. Works for any clone location.
   3. `~/Downloads/m5stack/buddy/device`.
   4. `~/Desktop/m5stack/buddy/device`.
 

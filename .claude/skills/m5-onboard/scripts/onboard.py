@@ -726,12 +726,17 @@ def _check_port_access(port: str) -> None:
 def _requirements_path() -> str:
     """Absolute path to the repo-root requirements.txt.
 
-    Two levels up from this file: ``onboard/scripts/onboard.py`` →
-    ``onboard/`` → repo root. Stable across the canonical
-    ``~/Downloads/m5stack/`` and any clone-elsewhere setup.
+    Four levels up from this file:
+    ``<repo>/.claude/skills/m5-onboard/scripts/onboard.py`` →
+    ``<repo>/.claude/skills/m5-onboard/`` →
+    ``<repo>/.claude/skills/`` → ``<repo>/.claude/`` → repo root.
+    Stable across the canonical ``~/Downloads/m5stack/`` and any
+    clone-elsewhere setup.
     """
     return os.path.normpath(
-        os.path.join(os.path.dirname(__file__), "..", "..", "requirements.txt")
+        os.path.join(
+            os.path.dirname(__file__), "..", "..", "..", "..", "requirements.txt"
+        )
     )
 
 
