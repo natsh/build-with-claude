@@ -12,7 +12,8 @@ MicroPython app bundle for the M5Stack Cardputer-Adv. Installed onto `/flash/` b
 └── apps/
     ├── claude_buddy.py  BLE client that pairs with Claude.app's Hardware Buddy
     ├── hello_cardputer.py
-    └── snake.py
+    ├── snake.py
+    └── mine_tale.py     Undertale-style micro-RPG, Minecraft-flavored (mini level 1)
 ```
 
 `main.py` scans `/flash/apps/` at boot and shows every `.py` as a menu entry. Drop a new file in there, re-run `m5-onboard go` (or `install_apps.py --src buddy`), and it shows up.

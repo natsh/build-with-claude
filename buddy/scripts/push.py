@@ -52,6 +52,7 @@ DEFAULT_FILES = [
     "apps/claude_buddy.py",
     "apps/hello_cardputer.py",
     "apps/snake.py",
+    "apps/mine_tale.py",
 ]
 
 CHUNK_BYTES = 512  # source bytes per paste-mode write
