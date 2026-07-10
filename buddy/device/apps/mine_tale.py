@@ -3,8 +3,8 @@
 One mini level, end to end:
 
   1. Title screen (pixel creeper + logo).
-  2. Overworld: walk a small cave (WASD / arrow cluster), find the
-     Creeper, bump into it to start an encounter.
+  2. Overworld: walk two cave rooms (WASD / arrow cluster); a random
+     encounter can strike after any step.
   3. Battle, Undertale-rules / Minecraft-flavor:
        MINE  — timing-bar attack (stop the cursor near the center)
        TALK  — befriend the Creeper (two talks make it spareable)
@@ -55,7 +55,8 @@ _CREEP = 0x44A838
 _CREEP_DK = 0x2E7D27
 _SKIN = 0xC68863
 _HAIR = 0x4A2F17
-_EYE = 0x3A2FA8
+_SHIRT = 0x2B50C8
+_STRIPE = 0xC838C8
 _TNT = 0xC33B2F
 
 # ---------------------------------------------------------------- sprites
@@ -74,17 +75,17 @@ _SPR_CREEPER = (
 _PAL_CREEPER = {"g": _CREEP, "G": _CREEP_DK, "X": _BLACK}
 
 _SPR_PLAYER = (
+    ".hhhhhh.",  # bob hair
     "hhhhhhhh",
-    "hhhhhhhh",
-    "hssssssh",
-    "ssssssss",
-    "swesseWs",
-    "ssssssss",
-    "ssmmmmss",
-    "ssssssss",
+    "hffffffh",
+    "hfLffLfh",  # closed eyes
+    ".ffLLff.",
+    "fbbbbbbf",  # shirt
+    ".pppppp.",  # shirt stripe
+    "..b..b..",
 )
-_PAL_PLAYER = {"h": _HAIR, "s": _SKIN, "w": _WHITE, "W": _WHITE,
-               "e": _EYE, "E": _EYE, "m": _HAIR}
+_PAL_PLAYER = {"h": _HAIR, "f": _SKIN, "L": _BLACK,
+               "b": _SHIRT, "p": _STRIPE}
 
 _SPR_HEART = (
     ".XX..XX.",
@@ -198,7 +199,7 @@ def _title(kb):
     _LCD.fillScreen(_BLACK)
     _sprite(_SPR_CREEPER, _PAL_CREEPER, (_W - 40) // 2, 8, 5)
     _center("MINE-TALE", 56, _ORANGE, size=3)
-    _center("a creeper blocks your path", 88, _CREAM)
+    _center("something stalks these caves", 88, _CREAM)
     # dirt strip along the bottom for the Minecraft of it all
     _LCD.fillRect(0, _H - 18, _W, 18, _DIRT)
     for i in range(0, _W, 12):
@@ -211,23 +212,38 @@ def _title(kb):
 
 _TILE = 16
 _MAP_Y = 22
-_MAP = (
-    "###############",
-    "#.....#....*..#",
-    "#.##..#..###..#",
-    "#..#.....#....#",
-    "#*.#..##.#.##.#",
-    "#......#.....C#",
-    "###############",
+_MAPS = (
+    (   # room 0: the entry cave
+        "###############",
+        "#.....#....*..#",
+        "#.##..#..###..#",
+        "#..#.....#....D",
+        "#*.#..##.#.##.#",
+        "#......#......#",
+        "###############",
+    ),
+    (   # room 1: the deep cave
+        "###############",
+        "#..*....#.....#",
+        "#.###...#..##.#",
+        "D...#.......#.#",
+        "#.#...##..#.#.#",
+        "#.#....*..#...#",
+        "###############",
+    ),
 )
+# stepping into a door: (room, x, y) -> (room, x, y) landing tile
+_DOORS = {(0, 14, 3): (1, 1, 3), (1, 0, 3): (0, 13, 3)}
 _START = (1, 1)
 
 
-def _draw_tile(cx, cy):
+def _draw_tile(m, cx, cy):
     x = cx * _TILE
     y = _MAP_Y + cy * _TILE
-    t = _MAP[cy][cx]
-    if t == "#":
+    t = m[cy][cx]
+    if t == "D":
+        _LCD.fillRect(x, y, _TILE, _TILE, _BLACK)   # cave opening
+    elif t == "#":
         _LCD.fillRect(x, y, _TILE, _TILE, _STONE)
         # mortar cracks, deterministic per tile so redraws are stable
         _LCD.fillRect(x, y + 7, _TILE, 1, _STONE_DK)
@@ -244,6 +260,7 @@ def _draw_tile(cx, cy):
 
 
 def _draw_map(state):
+    m = _MAPS[state["room"]]
     _LCD.fillScreen(_BLACK)
     _LCD.fillRect(0, 0, _W, 20, _DARK)
     _LCD.fillRect(0, 20, _W, 1, _ORANGE)
@@ -253,14 +270,20 @@ def _draw_map(state):
     hp = "HP {}/20".format(state["hp"])
     _LCD.setTextColor(_CREAM, _DARK)
     _LCD.drawString(hp, _W - 6 - _LCD.textWidth(hp), 5)
-    for cy in range(len(_MAP)):
-        for cx in range(len(_MAP[0])):
-            _draw_tile(cx, cy)
-    if not state["won"]:
-        cx, cy = state["creeper"]
-        _sprite(_SPR_CREEPER, _PAL_CREEPER, cx * _TILE, _MAP_Y + cy * _TILE, 2)
+    for cy in range(len(m)):
+        for cx in range(len(m[0])):
+            _draw_tile(m, cx, cy)
     px, py = state["pos"]
     _sprite(_SPR_PLAYER, _PAL_PLAYER, px * _TILE, _MAP_Y + py * _TILE, 2)
+
+
+def _alert(px, py):
+    """Red '!' pops over the player's head: encounter!"""
+    x = px * _TILE + _TILE // 2 - 2
+    y = _MAP_Y + py * _TILE - 12
+    _LCD.fillRect(x, y, 4, 7, _RED)      # bar of the '!'
+    _LCD.fillRect(x, y + 9, 4, 3, _RED)  # dot of the '!'
+    time.sleep_ms(600)
 
 
 def _dialog(kb, lines):
@@ -284,11 +307,12 @@ def _dialog(kb, lines):
 
 
 def _overworld(kb, state):
-    """Walk the cave. Returns when the player bumps the Creeper."""
+    """Walk the caves. Returns when a random encounter triggers."""
     _draw_map(state)
+    m = _MAPS[state["room"]]
     if not state["intro_done"]:
         _dialog(kb, ("* You mined too deep and woke",
-                     "  something up. Find it.",
+                     "  something up. It hunts you now.",
                      "  (WASD / arrows move)"))
         state["intro_done"] = True
         _draw_map(state)
@@ -299,16 +323,20 @@ def _overworld(kb, state):
         if d:
             px, py = state["pos"]
             nx, ny = px + d[0], py + d[1]
-            t = _MAP[ny][nx]
-            if (nx, ny) == state["creeper"] and not state["won"]:
-                _dialog(kb, ("* A wild CREEPER blocks",
-                             "  the way!"))
-                return
-            if t != "#":
+            door = _DOORS.get((state["room"], nx, ny))
+            if door:
+                state["room"] = door[0]
+                state["pos"] = (door[1], door[2])
+                m = _MAPS[state["room"]]
+                _draw_map(state)
+            elif m[ny][nx] != "#":
                 state["pos"] = (nx, ny)
-                _draw_tile(px, py)
+                _draw_tile(m, px, py)
                 _sprite(_SPR_PLAYER, _PAL_PLAYER,
                         nx * _TILE, _MAP_Y + ny * _TILE, 2)
+                if not state["won"] and random.randint(1, 20) == 1:
+                    _alert(nx, ny)
+                    return
         elif i == "confirm" and state["won"]:
             return
         time.sleep_ms(40)
@@ -656,7 +684,7 @@ def run():
     time.sleep_ms(400)
     try:
         while True:                      # one loop = one full playthrough
-            state = {"pos": _START, "creeper": (13, 5), "hp": 20,
+            state = {"pos": _START, "room": 0, "hp": 20,
                      "bread": 2, "won": False, "intro_done": False}
             _title(kb)
             _overworld(kb, state)
